@@ -4,7 +4,7 @@ using Movies.Application.Models;
 
 namespace Movies.Application.Repositories;
 
-public class MovieRepository : IMovieRepository
+public class MovieRepository : IMovieRespository
 {
     private readonly IDbConnectionFactory _dbConnectionFactory;
 

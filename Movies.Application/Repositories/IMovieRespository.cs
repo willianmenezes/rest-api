@@ -2,7 +2,7 @@
 
 namespace Movies.Application.Repositories;
 
-public interface IMovieRepository
+public interface IMovieRespository
 {
     Task<bool> CreateAsync(Movie movie);
 
