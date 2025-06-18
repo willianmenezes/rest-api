@@ -11,6 +11,10 @@ public partial class Movie
     public string Slug => GeneratedSlug();
 
     public required int YearOfRelease { get; set; }
+    
+    public required float Rating { get; set; }
+    
+    public int? UserRating { get; set; }
 
     public required List<string> Genres { get; set; } = [];
 

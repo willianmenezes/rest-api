@@ -9,13 +9,16 @@ public class MovieService : IMovieService
 {
     private readonly IMovieRespository _movieRespository;
     private readonly IValidator<Movie> _validator;
+    private readonly IRatingRepository _ratingRepository;
 
     public MovieService(
         IMovieRespository movieRespository,
-        IValidator<Movie> validator)
+        IValidator<Movie> validator,
+        IRatingRepository ratingRepository)
     {
         _movieRespository = movieRespository;
         _validator = validator;
+        _ratingRepository = ratingRepository;
     }
 
     public async Task<bool> CreateAsync(Movie movie)
@@ -24,24 +27,25 @@ public class MovieService : IMovieService
         return await _movieRespository.CreateAsync(movie);
     }
 
-    public async Task<Movie?> GetByIdAsync(Guid id)
+    public async Task<Movie?> GetByIdAsync(Guid id, Guid? userId = null)
     {
-        return await _movieRespository.GetByIdAsync(id);
+        return await _movieRespository.GetByIdAsync(id, userId);
     }
 
-    public async Task<Movie?> GetBySlugAsync(string slug)
+    public async Task<Movie?> GetBySlugAsync(string slug, Guid? userId = null)
     {
-        return await _movieRespository.GetBySlugAsync(slug);
+        return await _movieRespository.GetBySlugAsync(slug, userId);
     }
 
-    public async Task<IEnumerable<Movie>> GetAllAsync()
+    public async Task<IEnumerable<Movie>> GetAllAsync(Guid? userId = null)
     {
-        return await _movieRespository.GetAllAsync();
+        return await _movieRespository.GetAllAsync(userId);
     }
 
-    public async Task<Movie?> UpdateAsync(Movie movie)
+    public async Task<Movie?> UpdateAsync(Movie movie, Guid? userId = null)
     {
         await _validator.ValidateAndThrowAsync(movie);
+
         var movieExisting = await _movieRespository.ExistsByIdAsync(movie.Id);
 
         if (!movieExisting)
@@ -50,6 +54,18 @@ public class MovieService : IMovieService
         }
 
         _ = await _movieRespository.UpdateAsync(movie);
+
+        if (!userId.HasValue)
+        {
+            var rating = await _ratingRepository.GetRatingAsync(movie.Id);
+            movie.Rating = rating ?? 0;
+            return movie;
+        }
+        
+        var ratings = await _ratingRepository.GetRatingAsync(movie.Id, userId.Value);
+        movie.UserRating = ratings.UserRating ?? 0;
+        movie.Rating = ratings.Rating ?? 0;
+
         return movie;
     }
 

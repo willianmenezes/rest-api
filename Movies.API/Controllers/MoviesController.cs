@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Movies.API.Auth;
 using Movies.API.Mapping;
-using Movies.Application.Repositories;
 using Movies.Application.Services;
 using Movies.Contracts.Requests;
 
@@ -18,7 +18,7 @@ public class MoviesController : ControllerBase
     }
 
     
-    [Authorize(AuthConstants.AdminPolicyName)]
+    [Authorize]
     [HttpPost(ApiEndpoints.Movies.Create)]
     public async Task<IActionResult> Create([FromBody] CreateMovieRequest request)
     {
@@ -37,12 +37,15 @@ public class MoviesController : ControllerBase
         return CreatedAtAction(nameof(Get), new { idOrSlug = movie.Id }, movieResponse);
     }
     
+    [Authorize]
     [HttpGet(ApiEndpoints.Movies.Get)]
     public async Task<IActionResult> Get([FromRoute] string idOrSlug)
     {
+        var userId = HttpContext.GetUserId(); 
+        
         var movie = Guid.TryParse(idOrSlug, out var parsedId)
-            ? await _movieService.GetByIdAsync(parsedId)
-            : await _movieService.GetBySlugAsync(idOrSlug);
+            ? await _movieService.GetByIdAsync(parsedId, userId)
+            : await _movieService.GetBySlugAsync(idOrSlug,userId);
 
         if (movie == null)
         {
@@ -53,20 +56,24 @@ public class MoviesController : ControllerBase
         return Ok(movieResponse);
     }
     
+    [Authorize]
     [HttpGet(ApiEndpoints.Movies.GetAll)]
     public async Task<IActionResult> GetAll()
     {
-        var movies = await _movieService.GetAllAsync();
+        var userId = HttpContext.GetUserId(); 
+        
+        var movies = await _movieService.GetAllAsync(userId);
         var movieResponses = movies.MapToMovieResponses();
         return Ok(movieResponses);
     }
 
-    [Authorize(AuthConstants.AdminPolicyName)]
+    [Authorize]
     [HttpPut(ApiEndpoints.Movies.Update)]
     public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateMovieRequest request)
     {
+        var userId = HttpContext.GetUserId(); 
         var movieToUpdate = request.MapToMovie(id);
-        var updated = await _movieService.UpdateAsync(movieToUpdate);
+        var updated = await _movieService.UpdateAsync(movieToUpdate, userId);
         
         if (updated == null)
         {
@@ -77,7 +84,7 @@ public class MoviesController : ControllerBase
         return Ok(response);
     }
 
-    [Authorize(AuthConstants.AdminPolicyName)]
+    [Authorize]
     [HttpDelete(ApiEndpoints.Movies.Delete)]
     public async Task<IActionResult> Delete([FromRoute] Guid id)
     {

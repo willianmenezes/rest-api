@@ -6,13 +6,13 @@ public interface IMovieService
 {
     Task<bool> CreateAsync(Movie movie);
 
-    Task<Movie?> GetByIdAsync(Guid id);
+    Task<Movie?> GetByIdAsync(Guid id, Guid? userId = null);
     
-    Task<Movie?> GetBySlugAsync(string slug);
+    Task<Movie?> GetBySlugAsync(string slug, Guid? userId = null);
 
-    Task<IEnumerable<Movie>> GetAllAsync();
+    Task<IEnumerable<Movie>> GetAllAsync(Guid? userId = null);
 
-    Task<Movie?> UpdateAsync(Movie movie);
+    Task<Movie?> UpdateAsync(Movie movie, Guid? userId = null);
     
     Task<bool> DeleteByIdAsync(Guid id);
 }
