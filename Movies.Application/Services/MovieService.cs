@@ -2,6 +2,7 @@
 using FluentValidation;
 using Movies.Application.Models;
 using Movies.Application.Repositories;
+using Movies.Application.Validators;
 
 namespace Movies.Application.Services;
 
@@ -10,15 +11,18 @@ public class MovieService : IMovieService
     private readonly IMovieRespository _movieRespository;
     private readonly IValidator<Movie> _validator;
     private readonly IRatingRepository _ratingRepository;
+    private readonly IValidator<GetAllMoviesOptions> _validatorOptions;
 
     public MovieService(
         IMovieRespository movieRespository,
         IValidator<Movie> validator,
-        IRatingRepository ratingRepository)
+        IRatingRepository ratingRepository,
+        IValidator<GetAllMoviesOptions> validatorOptions)
     {
         _movieRespository = movieRespository;
         _validator = validator;
         _ratingRepository = ratingRepository;
+        _validatorOptions = validatorOptions;
     }
 
     public async Task<bool> CreateAsync(Movie movie)
@@ -37,9 +41,11 @@ public class MovieService : IMovieService
         return await _movieRespository.GetBySlugAsync(slug, userId);
     }
 
-    public async Task<IEnumerable<Movie>> GetAllAsync(Guid? userId = null)
+    public async Task<IEnumerable<Movie>> GetAllAsync(GetAllMoviesOptions options)
     {
-        return await _movieRespository.GetAllAsync(userId);
+        await _validatorOptions.ValidateAndThrowAsync(options, CancellationToken.None);
+
+        return await _movieRespository.GetAllAsync(options);
     }
 
     public async Task<Movie?> UpdateAsync(Movie movie, Guid? userId = null)
@@ -61,7 +67,7 @@ public class MovieService : IMovieService
             movie.Rating = rating ?? 0;
             return movie;
         }
-        
+
         var ratings = await _ratingRepository.GetRatingAsync(movie.Id, userId.Value);
         movie.UserRating = ratings.UserRating ?? 0;
         movie.Rating = ratings.Rating ?? 0;

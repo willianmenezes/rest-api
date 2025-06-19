@@ -116,23 +116,41 @@ public class MovieRepository : IMovieRespository
         return movie;
     }
 
-    public async Task<IEnumerable<Movie>> GetAllAsync(Guid? userId = null)
+    public async Task<IEnumerable<Movie>> GetAllAsync(GetAllMoviesOptions options)
     {
         using var connection = await _dbConnectionFactory.CreateConnectionAsync();
+
+        var orderClause = string.Empty;
+
+        if (options.SortField is not null)
+        {
+            orderClause = $"""
+                             , m.{options.SortField}
+                             order by m.{options.SortField} {(options.SortOrder == SortOrder.Ascending ? "asc" : "desc")}
+                           """;
+        }
+
         var result = await connection.QueryAsync(
             new CommandDefinition(
                 """
                 select m.*, 
                         string_agg(distinct g.name, ',') as genres,
                         ROUND(avg(r.rating), 1) as rating,
-                        max(myr.rating) as userrating
+                        myr.rating as userrating
                 from movies m 
                     left join genres g on m.id = g.movieid
                     left join ratings r on m.id = r.movieid
                     left join ratings myr on m.id = myr.movieid
                                  and myr.userid = @userId
-                group by m.id
-                """, new { userId }
+                where (@title is null or m.title like '%' || @title || '%')
+                and (@yearOfRelease is null or m.yearofrelease = @yearOfRelease)
+                group by m.id, userrating {orderClause}
+                """, new
+                {
+                    userId = options.UserId,
+                    title = options.Title,
+                    yearOfRelease = options.YearOfRelease
+                }
             ));
 
         return result.Select(x => new Movie
@@ -140,7 +158,7 @@ public class MovieRepository : IMovieRespository
             Id = x.id,
             Title = x.title,
             YearOfRelease = x.yearofrelease,
-            Rating = (float?)x.rating ?? 0, 
+            Rating = (float?)x.rating ?? 0,
             UserRating = x.userrating,
             Genres = Enumerable.ToList(x.genres?.Split(','))
         });

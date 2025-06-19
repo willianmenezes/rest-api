@@ -10,7 +10,7 @@ public interface IMovieService
     
     Task<Movie?> GetBySlugAsync(string slug, Guid? userId = null);
 
-    Task<IEnumerable<Movie>> GetAllAsync(Guid? userId = null);
+    Task<IEnumerable<Movie>> GetAllAsync(GetAllMoviesOptions options);
 
     Task<Movie?> UpdateAsync(Movie movie, Guid? userId = null);
     

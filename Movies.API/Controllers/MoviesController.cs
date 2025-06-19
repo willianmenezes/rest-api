@@ -58,11 +58,12 @@ public class MoviesController : ControllerBase
     
     [Authorize]
     [HttpGet(ApiEndpoints.Movies.GetAll)]
-    public async Task<IActionResult> GetAll()
+    public async Task<IActionResult> GetAll([FromQuery] GetAllMoviesRequest request)
     {
         var userId = HttpContext.GetUserId(); 
-        
-        var movies = await _movieService.GetAllAsync(userId);
+        var options = request.MapToOptions()
+            .WithUserId(userId);
+        var movies = await _movieService.GetAllAsync(options);
         var movieResponses = movies.MapToMovieResponses();
         return Ok(movieResponses);
     }
