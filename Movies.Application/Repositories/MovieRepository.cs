@@ -145,11 +145,15 @@ public class MovieRepository : IMovieRespository
                 where (@title is null or m.title like '%' || @title || '%')
                 and (@yearOfRelease is null or m.yearofrelease = @yearOfRelease)
                 group by m.id, userrating {orderClause}
+                limit @pageSize
+                offset @pageOffset
                 """, new
                 {
                     userId = options.UserId,
                     title = options.Title,
-                    yearOfRelease = options.YearOfRelease
+                    yearOfRelease = options.YearOfRelease,
+                    pageSize = options.PageSize,
+                    pageOffset = (options.Page - 1) * options.PageSize
                 }
             ));
 
@@ -234,5 +238,24 @@ public class MovieRepository : IMovieRespository
             )
         );
         return exists;
+    }
+
+    public async Task<int> GetTotalCountAsync(string? title, int? yearOfRelease)
+    {
+        using var connection = await _dbConnectionFactory.CreateConnectionAsync(); 
+        
+        return await connection.QuerySingleAsync<int> (
+            new CommandDefinition(
+                """
+                select count(id) from movies
+                where (@title is null or title like '%' || @title || '%')
+                and (@yearOfRelease is null or yearofrelease = @yearOfRelease)
+                """, new
+                {
+                    title, 
+                    yearOfRelease
+                }
+            )
+        );
     }
 }

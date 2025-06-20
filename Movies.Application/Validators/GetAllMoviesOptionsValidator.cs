@@ -19,5 +19,8 @@ public class GetAllMoviesOptionsValidator : AbstractValidator<GetAllMoviesOption
         RuleFor(x => x.SortField)
             .Must(x => x is null || AcceptableSortFields.Contains(x, StringComparer.OrdinalIgnoreCase))
             .WithMessage("You can only sort by Title or YearOfRelease.");
+
+        RuleFor(x => x.Page)
+            .GreaterThanOrEqualTo(1);
     }
 }

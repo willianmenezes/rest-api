@@ -17,4 +17,6 @@ public interface IMovieRespository
     Task<bool> DeleteByIdAsync(Guid id);
 
     Task<bool> ExistsByIdAsync(Guid id);
+    
+    Task<int> GetTotalCountAsync(string? title, int? yearOfRelease);
 }
