@@ -132,7 +132,7 @@ public class MovieRepository : IMovieRespository
 
         var result = await connection.QueryAsync(
             new CommandDefinition(
-                """
+                $"""
                 select m.*, 
                         string_agg(distinct g.name, ',') as genres,
                         ROUND(avg(r.rating), 1) as rating,

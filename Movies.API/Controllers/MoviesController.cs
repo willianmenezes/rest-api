@@ -1,9 +1,11 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Movies.API.Auth;
 using Movies.API.Mapping;
 using Movies.Application.Services;
 using Movies.Contracts.Requests;
+using Movies.Contracts.Responses;
 
 namespace Movies.API.Controllers;
 
@@ -17,7 +19,7 @@ public class MoviesController : ControllerBase
         _movieService = movieService;
     }
 
-    
+
     [Authorize]
     [HttpPost(ApiEndpoints.Movies.Create)]
     public async Task<IActionResult> Create([FromBody] CreateMovieRequest request)
@@ -34,18 +36,21 @@ public class MoviesController : ControllerBase
             movie.Genres
         };
 
-        return CreatedAtAction(nameof(Get), new { idOrSlug = movie.Id }, movieResponse);
+        return CreatedAtAction(nameof(GetV1), new { idOrSlug = movie.Id }, movieResponse);
     }
-    
+
+    [ApiVersion(1.0)]
     [Authorize]
     [HttpGet(ApiEndpoints.Movies.Get)]
-    public async Task<IActionResult> Get([FromRoute] string idOrSlug)
+    public async Task<IActionResult> GetV1(
+        [FromServices] LinkGenerator linkGenerator,
+        [FromRoute] string idOrSlug)
     {
-        var userId = HttpContext.GetUserId(); 
-        
+        var userId = HttpContext.GetUserId();
+
         var movie = Guid.TryParse(idOrSlug, out var parsedId)
             ? await _movieService.GetByIdAsync(parsedId, userId)
-            : await _movieService.GetBySlugAsync(idOrSlug,userId);
+            : await _movieService.GetBySlugAsync(idOrSlug, userId);
 
         if (movie == null)
         {
@@ -53,14 +58,84 @@ public class MoviesController : ControllerBase
         }
 
         var movieResponse = movie.MapToMovieResponse();
+
+        var movieObj = new { id = movie.Id };
+
+        movieResponse.Links.Add(new Link
+        {
+            Href = linkGenerator.GetPathByAction(HttpContext, nameof(GetV1), values: new { idOrSlug }),
+            Rel = "self",
+            Type = "GET"
+        });
+
+        movieResponse.Links.Add(new Link
+        {
+            Href = linkGenerator.GetPathByAction(HttpContext, nameof(Update), values: new { id = idOrSlug }),
+            Rel = "self",
+            Type = "PUT"
+        });
+
+        movieResponse.Links.Add(new Link
+        {
+            Href = linkGenerator.GetPathByAction(HttpContext, nameof(Delete), values: new { id = idOrSlug }),
+            Rel = "self",
+            Type = "DELETE"
+        });
+
         return Ok(movieResponse);
     }
     
+    [ApiVersion(2.0)]
+    [Authorize]
+    [HttpGet(ApiEndpoints.Movies.Get)]
+    public async Task<IActionResult> GetV2(
+        [FromServices] LinkGenerator linkGenerator,
+        [FromRoute] string idOrSlug)
+    {
+        var userId = HttpContext.GetUserId();
+
+        var movie = Guid.TryParse(idOrSlug, out var parsedId)
+            ? await _movieService.GetByIdAsync(parsedId, userId)
+            : await _movieService.GetBySlugAsync(idOrSlug, userId);
+
+        if (movie == null)
+        {
+            return NotFound();
+        }
+
+        var movieResponse = movie.MapToMovieResponse();
+
+        var movieObj = new { id = movie.Id };
+
+        movieResponse.Links.Add(new Link
+        {
+            Href = linkGenerator.GetPathByAction(HttpContext, nameof(GetV1), values: new { idOrSlug }),
+            Rel = "self",
+            Type = "GET"
+        });
+
+        movieResponse.Links.Add(new Link
+        {
+            Href = linkGenerator.GetPathByAction(HttpContext, nameof(Update), values: new { id = idOrSlug }),
+            Rel = "self",
+            Type = "PUT"
+        });
+
+        movieResponse.Links.Add(new Link
+        {
+            Href = linkGenerator.GetPathByAction(HttpContext, nameof(Delete), values: new { id = idOrSlug }),
+            Rel = "self",
+            Type = "DELETE"
+        });
+
+        return Ok(movieResponse);
+    }
+
     [Authorize]
     [HttpGet(ApiEndpoints.Movies.GetAll)]
     public async Task<IActionResult> GetAll([FromQuery] GetAllMoviesRequest request)
     {
-        var userId = HttpContext.GetUserId(); 
+        var userId = HttpContext.GetUserId();
         var options = request.MapToOptions()
             .WithUserId(userId);
         var movies = await _movieService.GetAllAsync(options);
@@ -73,10 +148,10 @@ public class MoviesController : ControllerBase
     [HttpPut(ApiEndpoints.Movies.Update)]
     public async Task<IActionResult> Update([FromRoute] Guid id, [FromBody] UpdateMovieRequest request)
     {
-        var userId = HttpContext.GetUserId(); 
+        var userId = HttpContext.GetUserId();
         var movieToUpdate = request.MapToMovie(id);
         var updated = await _movieService.UpdateAsync(movieToUpdate, userId);
-        
+
         if (updated == null)
         {
             return NotFound();
